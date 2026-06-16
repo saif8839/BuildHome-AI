@@ -8,7 +8,7 @@ dotenv.config()
 //loacal imports
 import authRoutes from "./routes/authRoutes.js"
 import errorHandler from "./middlewares/errorHandler.js"
-
+import adminRoutes from "./routes/adminRoutes.js"
 
 const PORT = process.env.PORT || 5000
 const app = express()
@@ -22,7 +22,11 @@ connectDB()
 app.use(express.json())
 app.use(express.urlencoded())
 
+//auth Routes
 app.use("/api/auth" , authRoutes)
+
+//Admin Routes
+app.use("/api/admin" , adminRoutes)
 
 
 app.get("/" , (req,res) =>

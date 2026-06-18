@@ -1,4 +1,5 @@
 import User from "../models/userModel.js"
+import Vendor from "../models/vendorModel.js"
 
 const getAllUsers = async (req ,res)=>
 {
@@ -21,12 +22,58 @@ const updateUser = async(req , res) =>
 
 const getAllVendors = async (req , res ) =>
 { 
-    res.send("get vendor")
+    const vendors = await Vendor.find()
+
+    if(!vendors)
+    {
+        res.status(409)
+        throw new Error("No Vendors Found!!!")
+    }
+
+    res.status(201)
+    res.json(vendors)
+
 }
 
 const updateVendor = async (req, res) =>
 {
-    res.send("update vendor")
+    const vendorId = req.params.vid
+
+    const vendor = await Vendor.findById(vendorId)
+
+    if(!vendor)
+    {
+        res.status(201)
+        throw new Error("No such Vendor Exist!!!")
+    }
+
+    const {status} = req.body
+
+    if(!status)
+    {
+        res.status(409)
+        throw new Error("Please Send Status to Update!!!")
+    }
+
+    const updatedVendor = await Vendor.findByIdAndUpdate(vendor._id , {status : status} , {new : true})
+
+    if(!updateVendor)
+    {
+        res.status(404)
+        throw new Error("Vendor Not Created!!!")
+    }
+    let user = await User.findById(vendor.user)
+
+    if(!user)
+    {
+        res.status(409)
+        throw new Error("Invalid User Id")
+    }
+
+    await User.findByIdAndUpdate(vendor.user , {isVendor : true} , {new : true})
+
+    res.status(201).json(vendor)
+
 }
 
 

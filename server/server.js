@@ -9,6 +9,9 @@ dotenv.config()
 import authRoutes from "./routes/authRoutes.js"
 import errorHandler from "./middlewares/errorHandler.js"
 import adminRoutes from "./routes/adminRoutes.js"
+import vendorRoutes from "./routes/vendorRoutes.js"
+
+
 
 const PORT = process.env.PORT || 5000
 const app = express()
@@ -27,6 +30,9 @@ app.use("/api/auth" , authRoutes)
 
 //Admin Routes
 app.use("/api/admin" , adminRoutes)
+
+//Vendor Routes
+app.use("/api/vendor" , vendorRoutes)
 
 
 app.get("/" , (req,res) =>

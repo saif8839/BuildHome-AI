@@ -6,7 +6,8 @@ const vendorSchema = new mongoose.Schema({
     user : {
         type : mongoose.Schema.Types.ObjectId,
         ref : "User",
-        required : true
+        required : true,
+        unique : true
     },
     name : {
         type : String, 
@@ -25,10 +26,10 @@ const vendorSchema = new mongoose.Schema({
         type : String,
         required : [true , "Vendor Address Required"]
     },
-    category : {
-        type : String,
-        required : [true , "Vendor Category Required"]
-    },
+    category : [{
+        type : mongoose.Schema.Types.ObjectId,
+        ref : "Category"
+    }],
     status : {
         type : String,
         required : true,

@@ -1,3 +1,6 @@
+import capitalizeWords from "../features/capitalizeWords.js"
+import Category from "../models/categoryModel.js"
+import Product from "../models/productModel.js"
 import User from "../models/userModel.js"
 import Vendor from "../models/vendorModel.js"
 
@@ -66,7 +69,7 @@ const updateVendor = async (req, res) =>
 
     if(!user)
     {
-        res.status(409)
+        res.status(404)
         throw new Error("Invalid User Id")
     }
 
@@ -76,6 +79,89 @@ const updateVendor = async (req, res) =>
 
 }
 
+const addProductCategory = async (req,res) =>
+{
+
+    const {name} = req.body
+
+    if(!name)
+    {
+        res.status(409)
+        throw new Error("please Provide The Category Name!")
+    }
+     
+    const newWord = capitalizeWords(name)
+
+    const existingCategory = await Category.findOne({name : newWord})
+
+    if(existingCategory)
+    {
+        res.status(409)
+        throw new Error("Same Category Exist , Can't Allow Duplicates...")
+    }
+
+    const newCategory = await Category.create(
+        {
+            name : newWord
+        }
+    )
+
+
+    if(!newCategory)
+    {
+        res.status(409)
+        throw new Error("Category Not Created!!!")        
+    }
+
+    res.status(200).json(newCategory)
+
+}
+
+
+const getProductCategory = async (req,res)=>
+{
+    const allCategory = await Category.find()
+
+    console.log(allCategory.length)
+
+    if(allCategory.length === 0)
+    {
+        res.status(409)
+        throw new Error("No Catgeory Found")
+    }
+
+    res.status(200).json(allCategory)
+}
+
+const removeProductCategory = async (req ,res)=>
+    {
+        
+    
+        const {did} = req.params
+        
+        
+    const productUsingCategory = await Product.countDocuments({category : did})
+
+    if(productUsingCategory.length > 0)
+    {
+        res.status(409)
+        throw new Error("Cannot delete category because products are assigned to it")
+    }
+    
+    const checkCategory  = await Category.findByIdAndDelete(did)
+
+    if(!checkCategory)
+    {
+        res.status(404)
+        throw new Error("No Such Category Found!!!")
+    }
+
+    res.status(200).json({
+        message : "Category Deleted",
+        id : checkCategory._id,
+        name : checkCategory.name
+    })
+}
 
 const getAllProducts = async (req , res) =>
 {
@@ -100,7 +186,7 @@ const getAllRatings = async (req,res) =>
 
 
 
-const adminController = {getAllOrders ,getAllProducts , getAllRatings , getAllUsers ,getAllVendors , updateUser , updateVendor , updateProduct}
+const adminController = {removeProductCategory , getProductCategory , addProductCategory ,getAllOrders ,getAllProducts , getAllRatings , getAllUsers ,getAllVendors , updateUser , updateVendor , updateProduct}
 
 export default adminController
 

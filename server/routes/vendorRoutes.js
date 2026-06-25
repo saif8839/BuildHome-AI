@@ -8,5 +8,6 @@ const router = express.Router()
 router.post("/request" , protect.forUser  , vendorController.becomeVendor)
 
 
+router.post("/product/add" , protect.forUser  , vendorController.addProduct)
 
 export default router

@@ -21,5 +21,10 @@ router.put("/vendors/:vid" , protect.forAdmin , adminController.updateVendor)
 
 router.put("/products/:pid" , protect.forAdmin , adminController.updateProduct)
 
+router.post("/category/add" , protect.forAdmin , adminController.addProductCategory)
+
+router.get("/category" , protect.forAdmin , adminController.getProductCategory)
+
+router.put("/category/:did" , protect.forAdmin , adminController.removeProductCategory)
 
 export default router

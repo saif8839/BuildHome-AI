@@ -1,3 +1,4 @@
+import Product from "../models/productModel.js"
 import Vendor from "../models/vendorModel.js"
 
 
@@ -52,11 +53,14 @@ const becomeVendor = async (req, res) =>
 const addProduct = async (req, res) =>
 {
 
-    const {name , image , brand , category , price , stock , description } = req.body
+    const {name , brand , category , price , stock , description } = req.body
 
-    if(!name || !image || !brand || !category || !price || !stock || !description)
+    console.log(req.files)
+    const image = req.files.map(file => file.filename)
+
+    if(!name || !image || !brand || !category || price==null || stock==null || !description)
     {
-        res.status(409)
+        res.status(400)
         throw new Error("Fill All Important Details , Before Putting Out A Product!!!")
     }
 
@@ -66,15 +70,26 @@ const addProduct = async (req, res) =>
 
     if(!vendorExist)
     {
-        res.status(409)
+        res.status(404)
         throw new Error("No Such Vendor Exist , Please Register As Vendor!!!")
     }
 
+    const product = {
+        name , image , brand , category , price , stock , description , vendor : vendorExist._id
+    }
 
+    const newProduct = await Product.create(product)
 
-    res.status(200).json({
-        msg : "products"
-    })
+    if(!newProduct)
+    {
+        res.status(404)
+        throw new Error("Product Not Created!!!")
+    }
+
+    await newProduct.populate("vendor" , "name")
+    await newProduct.populate("category" , "name")
+
+    res.status(200).json(newProduct)
 }
 
 const vendorController = {

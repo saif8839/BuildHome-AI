@@ -122,7 +122,7 @@ const getProductCategory = async (req,res)=>
 {
     const allCategory = await Category.find()
 
-    console.log(allCategory.length)
+
 
     if(allCategory.length === 0)
     {
@@ -165,14 +165,20 @@ const removeProductCategory = async (req ,res)=>
 
 const getAllProducts = async (req , res) =>
 {
-    res.send("get products")
-}
 
-const updateProduct = async (req,res) =>
-{
-    res.send("Update Products")
-}
+    const products = await Product.find({
+        isActive : { $eq : true}
+    })
 
+    if(!products || products.length === 0)
+    {
+        res.status(404)
+        throw new Error("No Such Active Products Found!!!")
+    }
+
+    res.status(201).json(products)
+
+}
 
 const getAllOrders = async (req ,res) =>
 {
@@ -186,7 +192,7 @@ const getAllRatings = async (req,res) =>
 
 
 
-const adminController = {removeProductCategory , getProductCategory , addProductCategory ,getAllOrders ,getAllProducts , getAllRatings , getAllUsers ,getAllVendors , updateUser , updateVendor , updateProduct}
+const adminController = {removeProductCategory , getProductCategory , addProductCategory ,getAllOrders ,getAllProducts , getAllRatings , getAllUsers ,getAllVendors , updateUser , updateVendor }
 
 export default adminController
 

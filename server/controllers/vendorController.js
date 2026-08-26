@@ -92,8 +92,97 @@ const addProduct = async (req, res) =>
     res.status(200).json(newProduct)
 }
 
+const getMyProducts = async (req , res)=>
+{
+
+
+    // console.log(req.user , req.vendor)
+
+    const vendorId = req.vendor._id
+
+    if(!vendorId)
+    {
+        res.status(404)
+        throw new Error("Vendor not found")
+    }
+    
+    const products = await Product.find({vendor : vendorId})
+
+    if(!products || products.length === 0)
+    {
+        res.status(404)
+        throw new Error("No Products Found!!!")
+    }
+
+    res.status(200).json(products)
+}
+
+const updateMyProduct = async (req , res) =>
+{
+    const productId = req.params.pid
+    const vendorId = req.vendor._id
+
+    if(!productId)
+    {
+        res.status(404)
+        throw new Error("No Such Product or Id Exist")
+    }
+
+    const product = await Product.findById(productId)
+
+    if(product.vendor.toString() !==  vendorId.toString())
+    {
+        res.status(409)
+        throw new Error("Unable To Update Product")
+    }
+
+
+    const updatedProduct = await Product.findByIdAndUpdate(productId , req.body , {new : true})
+
+    if(!updatedProduct)
+    {
+        res.status(409)
+        throw new Error("Product Not Updated!!!")
+    }
+
+    res.status(200).json(updatedProduct)
+}
+
+
+const getAllVendors = async (req,res) =>
+{
+    const vendors = await Vendor.find()
+
+    if(vendors.length === 0)
+    {
+        res.status(404)
+        throw new Error("No Vendors Available")
+    }
+
+    res.status(200).json(vendors)
+
+}
+
+
+const getSingleVendor = async (req,res)=>
+{
+    const vendorId = req.params.vid
+    const vendor = await Vendor.findById(vendorId)
+    
+    if(!vendor || !vendor.isActive)
+    {
+        res.status(200)
+        throw new Error("Invalid Vendor Id , No Such Vendor Found")
+    }
+
+    res.status(200).json(vendor)
+
+}
+
+
+
 const vendorController = {
-    becomeVendor , addProduct
+    becomeVendor , addProduct , getMyProducts , updateMyProduct , getAllVendors ,getSingleVendor
 }
 
 

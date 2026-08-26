@@ -10,7 +10,7 @@ import authRoutes from "./routes/authRoutes.js"
 import errorHandler from "./middlewares/errorHandler.js"
 import adminRoutes from "./routes/adminRoutes.js"
 import vendorRoutes from "./routes/vendorRoutes.js"
-
+import productRoutes from "./routes/productRoutes.js"
 
 
 const PORT = process.env.PORT || 5000
@@ -34,6 +34,7 @@ app.use("/api/admin" , adminRoutes)
 //Vendor Routes
 app.use("/api/vendor" , vendorRoutes)
 
+app.use("/api/products" , productRoutes)
 
 app.get("/" , (req,res) =>
 {

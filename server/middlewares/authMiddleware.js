@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken"
 import User from "../models/userModel.js"
+import Vendor from "../models/vendorModel.js"
 
 const forUser = async (req , res, next) =>
 {
@@ -13,6 +14,19 @@ const forUser = async (req , res, next) =>
           let decoded =  jwt.verify(token , process.env.JWT_SECRET)
           let user = await User.findById(decoded.id)
           req.user = user
+          if(user.isVendor)
+          {
+            let vendor = await Vendor.findOne({user : user._id})
+            if(vendor)
+            {
+                req.vendor = vendor
+            }
+            else 
+            {
+                 res.status(404)
+        throw new Error("Conflict for VendorId , User may Not Be a Vendor")
+            }
+          }
             next()
         }
         else{

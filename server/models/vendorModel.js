@@ -35,6 +35,12 @@ const vendorSchema = new mongoose.Schema({
         required : true,
         enum : ["active" , "pending" , "suspended" , "hold"],
         default : "pending"
+    },
+    isActive : 
+    {
+        type : Boolean,
+        default : true,
+        required : true
     }
 },
 {

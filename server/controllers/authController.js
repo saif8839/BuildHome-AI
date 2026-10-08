@@ -9,7 +9,7 @@ const registerUser = async (req , res) =>
 
     if(!name || !email || !phone || !password)
     {
-        res.status(409)
+        res.status(400)
         throw new Error("Plaese fill All Details!!!")
     }
 
@@ -41,6 +41,8 @@ const registerUser = async (req , res) =>
 
     const userObj = newUser.toObject()
 
+
+
     delete userObj.password;
     
 
@@ -62,15 +64,13 @@ const loginUser = async (req , res) =>
 
    if(!email || !password) 
    {
-    res.status(409)
+    res.status(400)
     throw new Error("Please Fill All Details!!!")
    }
 
    const user = await User.findOne({
     email : email
    }).select("+password")
-
-   
 
 
    if(user && await bcrypt.compare(password , user.password))

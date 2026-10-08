@@ -14,7 +14,7 @@ const forUser = async (req , res, next) =>
           let decoded =  jwt.verify(token , process.env.JWT_SECRET)
           let user = await User.findById(decoded.id)
           req.user = user
-          if(user.isVendor)
+          if(user.role==="vendor")
           {
             let vendor = await Vendor.findOne({user : user._id})
             if(vendor)
@@ -55,7 +55,7 @@ const forAdmin = async (req , res, next) =>
           let decoded =  jwt.verify(token , process.env.JWT_SECRET)
           let user = await User.findById(decoded.id)
           req.user = user
-        if(user.isAdmin)
+        if(user.role==="admin")
         {
             next()
         }

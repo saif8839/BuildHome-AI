@@ -5,12 +5,18 @@ import jwt from "jsonwebtoken"
 const registerUser = async (req , res) =>
 {
     
-    const {name , email , phone , password} = req.body
+    const {name , email , phone , password , role} = req.body
 
     if(!name || !email || !phone || !password)
     {
         res.status(400)
         throw new Error("Plaese fill All Details!!!")
+    }
+
+    if(role==="admin")
+    {
+        res.status(409)
+        throw new Error("admin feature is only available for chosen Person!!!")
     }
 
 
@@ -30,8 +36,10 @@ const registerUser = async (req , res) =>
     const hashedPassword = await bcrypt.hash(password , Salt)
 
     const newUser =  await User.create({
-        name : name , email : email , password : hashedPassword , phone : phone
+        name : name , email : email , password : hashedPassword , phone : phone , role : role
     })
+
+
 
     if(!newUser)
     {

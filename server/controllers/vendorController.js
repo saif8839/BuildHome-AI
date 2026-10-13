@@ -6,48 +6,74 @@ const becomeVendor = async (req, res) =>
 {
     const userId = req.user._id
 
-    const userExist = await Vendor.findOne({user : userId})
+    const vendorExist = await Vendor.findOne({user : userId})
 
-  if(userExist)
+    const {businessName , phone, email , address , category} = req.body
+
+  if(vendorExist)
   {
-      if(userExist.status === "suspended")
+      if(vendorExist.status === "suspended")
     {
-        res.status(200)
-        throw new Error("Can't Request Profile is Rejected")
+        res.status(403)
+        throw new Error("Can't Request your vendor profile is suspended , contact support.")
     }
 
-    if(userExist.status === "active")
+    if(vendorExist.status === "active")
     {
         res.status(409)
         throw new Error("Profile is Active No Need to Request!!!")
     }
     
-    if(userExist.status === "pending")
+    if(vendorExist.status === "pending")
     {
-        res.status(200)
+        res.status(409)
         throw new Error("Wait for Approval , ALready Reqested!!!")
+    }
+
+     if(vendorExist.status === "rejected")
+    {
+       vendorExist.businessName = businessName
+       vendorExist.email = email
+       vendorExist.phone = phone 
+       vendorExist.address = address
+       vendorExist.category = category
+
+       vendorExist.status = "pending"
+
+       await vendorExist.save()
+
+       res.status(200).json(
+        {
+            message : "Application resubmitted for Approval!!!",
+            vendor : vendorExist
+        }
+       )
+
     }
   }
 
-    const {name , phone, email , address , category} = req.body
+    
 
-    if(!name || !phone || !email || !address || !category.length===0 )
+    if(!businessName || !phone || !email || !address || category.length===0 )
     {
         res.status(409)
         throw new Error("Please Fill required Details!!!")
     }
 
     const vendor = await Vendor.create({
-        user : userId , name, phone , email , address , category
+        user : userId , businessName, phone , email , address , category
     })
-
+ 
     if(!vendor)
     {
         res.status(409)
         throw new Error("Vendor Not Created")
     }
 
-    res.status(200).json(vendor)
+    res.status(200).json({
+        message : "Vendor application Submitted successfully!!!",
+        vendor : vendor
+    })
 }
 
 const addProduct = async (req, res) =>

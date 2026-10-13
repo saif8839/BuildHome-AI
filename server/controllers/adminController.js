@@ -42,15 +42,7 @@ const updateVendor = async (req, res) =>
 {
     const vendorId = req.params.vid
 
-    const vendor = await Vendor.findById(vendorId)
-
-    if(!vendor)
-    {
-        res.status(201)
-        throw new Error("No such Vendor Exist!!!")
-    }
-
-    const {status} = req.body
+      const {status} = req.body
 
     if(!status)
     {
@@ -58,13 +50,31 @@ const updateVendor = async (req, res) =>
         throw new Error("Please Send Status to Update!!!")
     }
 
-    const updatedVendor = await Vendor.findByIdAndUpdate(vendor._id , {status : status} , {new : true})
+    const allowedStatuses = ["active" , "suspended" , "pending" , "rejected"]
 
-    if(!updateVendor)
+    if(!allowedStatuses.includes(status))
+    {
+        res.status(400)
+        throw new Error("Invalid Vendor Status!!!")
+    }
+
+        const vendor = await Vendor.findById(vendorId)
+
+    if(!vendor)
     {
         res.status(404)
-        throw new Error("Vendor Not Created!!!")
+        throw new Error("No such Vendor Exist!!!")
     }
+
+  
+    const updatedVendor = await Vendor.findByIdAndUpdate(vendor._id , {status : status} , {new : true , runValidators : true })
+
+    if(!updatedVendor)
+    {
+        res.status(404)
+        throw new Error("Couldn't update Vendor Status!!!")
+    }
+    
     let user = await User.findById(vendor.user)
 
     if(!user)
@@ -73,9 +83,22 @@ const updateVendor = async (req, res) =>
         throw new Error("Invalid User Id")
     }
 
-    await User.findByIdAndUpdate(vendor.user , {isVendor : true} , {new : true})
+    // if(status==="active" && updatedVendor.status==="active" && user.role!=="admin")
+    // {
+    //     await User.findByIdAndUpdate(vendor.user , {role : "vendor" } , {new : true})
+    // }
 
-    res.status(201).json(vendor)
+    if (status==="active" && updatedVendor.status==="active" && user.role!=="admin") {
+           user.role = "vendor";
+           await user.save();
+  }
+
+    res.status(201).json(
+        {
+            message : "Vendor Status Updated Successfully!!!",
+            vendor : updatedVendor
+        }
+    )
 
 }
 

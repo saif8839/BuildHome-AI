@@ -5,7 +5,7 @@ import jwt from "jsonwebtoken"
 const registerUser = async (req , res) =>
 {
     
-    const {name , email , phone , password , role} = req.body
+    const {name , email , phone , password } = req.body
 
     if(!name || !email || !phone || !password)
     {
@@ -13,13 +13,7 @@ const registerUser = async (req , res) =>
         throw new Error("Plaese fill All Details!!!")
     }
 
-    if(role==="admin")
-    {
-        res.status(409)
-        throw new Error("admin feature is only available for chosen Person!!!")
-    }
-
-
+ 
     const userExist = await User.findOne(
         {
             $or : [ { email : email} , {phone : phone}]
@@ -36,7 +30,7 @@ const registerUser = async (req , res) =>
     const hashedPassword = await bcrypt.hash(password , Salt)
 
     const newUser =  await User.create({
-        name : name , email : email , password : hashedPassword , phone : phone , role : role
+        name : name , email : email , password : hashedPassword , phone : phone
     })
 
 

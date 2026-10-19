@@ -38,7 +38,7 @@ const vendorSchema = new mongoose.Schema({
       },
       city: {
         type: String,
-        required: [true, "City is required"],
+        required: [true, "City is required"], 
         trim: true
       },
       state: {

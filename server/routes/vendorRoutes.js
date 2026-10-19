@@ -9,11 +9,11 @@ const router = express.Router()
 router.post("/request" , protect.forUser  , vendorController.becomeVendor)
 
 
-router.post("/product" , protect.forUser , upload.array('image' , 5)  , vendorController.addProduct)
+router.post("/product" , protect.forUser , upload.array('image' , 8)  , vendorController.addProduct)
 
 router.get("/product" , protect.forUser , vendorController.getMyProducts)
 
-router.put("/product/:pid" , protect.forUser , upload.array('image' , 5)  , vendorController.updateMyProduct)
+router.put("/product/:pid" , protect.forUser , upload.array('image' , 8)  , vendorController.updateMyProduct)
 
 router.get("/profiles" , vendorController.getAllVendors)
 

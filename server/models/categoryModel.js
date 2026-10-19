@@ -1,3 +1,4 @@
+import { kMaxLength } from "buffer";
 import mongoose from "mongoose";
 
 
@@ -5,8 +6,11 @@ import mongoose from "mongoose";
 const categorySchema = mongoose.Schema({
     name : {
         type : String,
-        required : true,
-        unique : true
+        required : [true , "Please Enter a Valid Category"],
+        unique : true,
+        trim : true,
+        maxLength : [80 , "Maximum category Length has to be 80"],
+        minLength : 1
     }
 },
 {

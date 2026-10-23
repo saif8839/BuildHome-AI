@@ -19,6 +19,8 @@ router.get("/profiles" , vendorController.getAllVendors)
 
 router.get("/profiles/:vid" ,  vendorController.getSingleVendor)
 
+router.post("/coupon" , protect.forUser , vendorController.addCoupons)
 
+router.put("/coupon/:cid" , protect.forUser , vendorController.updateCoupon)
 
 export default router

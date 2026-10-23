@@ -1,4 +1,5 @@
 import uploadToCloudinary from "../middlewares/cloudinaryUploadMiddlware.js"
+import Coupon from "../models/couponModel.js"
 import Product from "../models/productModel.js"
 import Vendor from "../models/vendorModel.js"
 
@@ -250,7 +251,7 @@ const updateMyProduct = async (req , res) =>
 
 const getAllVendors = async (req,res) =>
 {
-    const vendors = await Vendor.find({isActive  : {$eq : true}}).populate("user" , "name email phone role avatar")
+    const vendors = await Vendor.find({isActive  : {$eq : true}}).populate("user" , "name email phone role avatar").sort({ createdAt: -1 });
 
     if(vendors.length === 0)
     {
@@ -280,8 +281,114 @@ const getSingleVendor = async (req,res)=>
 
 
 
+const addCoupons = async (req ,res) =>
+{
+    const {couponCode ,couponDiscount ,discountType , expiresAt } = req.body
+
+    const vendorId = req.vendor._id
+
+    const vendorExist = await Vendor.findById(vendorId)
+
+    if(!vendorExist)
+    {
+        res.status(404)
+        throw new Error("Only Vendors can create Coupon ,  Id is invalid , contact admin")
+    }
+
+    if(vendorExist.isActive === false || vendorExist.status !== "active")
+    {
+        res.status(404)
+        throw new Error("Only Vendors can create Coupon , inactive Vendor")
+    }
+
+    if(!couponCode || !couponDiscount || !discountType)
+    {
+        res.status(409)
+        throw new Error("FIll all Required Coupon Details!!!")
+    }
+    let coupon = null
+
+     // 4. Validate expiry date if provided
+    let expiryDate;
+
+    if (expiresAt !== undefined && expiresAt !== null && expiresAt !== "") {
+        expiryDate = new Date(expiresAt);
+
+        if (
+            Number.isNaN(expiryDate.getTime()) ||
+            expiryDate <= new Date()
+        ) {
+            return res.status(400).json({
+                message: "Expiry date must be a valid future date."
+            });
+        }
+    }
+    
+    coupon = { couponCode ,couponDiscount , discountType , vendor : vendorId }
+
+    if(expiryDate)
+    {
+        coupon.expiresAt = expiryDate
+    }
+   
+    console.log(coupon)
+
+    const newCoupon = await Coupon.create(coupon)
+
+    if(!newCoupon)
+    {
+        res.status(401)
+        throw new Error("Unbale to Create a Coupon!!!")
+    }
+
+    res.status(200).json({
+        message : "Coupon Created!!!",
+        coupon : newCoupon
+    })
+
+}
+
+const updateCoupon = async (req ,res) =>
+{
+    const couponId = req.params.cid
+
+    const couponExist = await Coupon.findById(couponId)
+
+    if(!couponExist)
+    {
+        res.status(404)
+        throw new Error("No or Coupon or Coupon Id Exist!!!")
+    }
+
+       const vendor = await Vendor.findOne({
+        user: req.user._id
+    });
+
+    if (!vendor || vendor.status !== "active") {
+        return res.status(403).json({
+            message: "An active vendor account is required."
+        });
+    }
+
+    const updatedCoupon = await Coupon.findByIdAndUpdate(couponId , req.body , {new :true , runValidators : true})
+
+    if(!updatedCoupon)
+    {
+        res.status(401)
+        throw new Error("Facing some Issues in Updating Coupon , please Retry!!")
+    }
+
+    res.status(200).json(
+        {
+            message : "Coupon Updated Succesfully...",
+            coupon : updatedCoupon
+        }
+    )
+
+}
+
 const vendorController = {
-    becomeVendor , addProduct , getMyProducts , updateMyProduct , getAllVendors ,getSingleVendor
+    becomeVendor , addProduct , getMyProducts , updateMyProduct , getAllVendors ,getSingleVendor ,  addCoupons , updateCoupon
 }
 
 

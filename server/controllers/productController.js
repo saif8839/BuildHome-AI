@@ -32,8 +32,10 @@ const getSingleProduct = async (req, res) =>
 {
     const productId = req.params.pid
 
-    const product = await Product.findById(productId).populate("category" , "name")
-
+    const product = await Product.findById(productId).populate("vendor", "businessName address phone email")
+        .populate("category", "name")
+        .sort({ createdAt: -1 });
+        
     if(!product || !product.isActive)
     {
         res.status(409)

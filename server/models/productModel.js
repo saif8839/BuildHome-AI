@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-const productSchema = mongoose.Schema(
+const productSchema = new mongoose.Schema(
 {
     productName: {
       type: String,
@@ -30,10 +30,10 @@ const productSchema = mongoose.Schema(
       type: Number,
       required: [true, "Product price is required"],
       min: [0, "Price cannot be negative"],
-      validate: {
-        validator: Number.isFinite,
-        message: "Price must be a finite number"
-      }
+        validate: {
+          validator: Number.isFinite,
+          message: "Price must be a finite number"
+        }
     },
   image: {
       type: [{
@@ -51,6 +51,7 @@ const productSchema = mongoose.Schema(
         message: "A product must have between 1 and 8 valid images"
       }
     },
+
     category: {
         type : mongoose.Schema.Types.ObjectId,
         ref : "Category",

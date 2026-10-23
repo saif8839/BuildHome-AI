@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 
 
 
-const categorySchema = mongoose.Schema({
+const categorySchema = new mongoose.Schema({
     name : {
         type : String,
         required : [true , "Please Enter a Valid Category"],

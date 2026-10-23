@@ -11,7 +11,8 @@ import errorHandler from "./middlewares/errorHandler.js"
 import adminRoutes from "./routes/adminRoutes.js"
 import vendorRoutes from "./routes/vendorRoutes.js"
 import productRoutes from "./routes/productRoutes.js"
-
+import couponRoutes from "./routes/couponRoutes.js"
+import cartRoutes from "./routes/cartRoutes.js"
 
 const PORT = process.env.PORT || 5000
 const app = express()
@@ -34,7 +35,14 @@ app.use("/api/admin" , adminRoutes)
 //Vendor Routes
 app.use("/api/vendor" , vendorRoutes)
 
+//Product Routes
 app.use("/api/products" , productRoutes)
+
+//Coupon Routes
+app.use("/api/coupons" , couponRoutes)
+
+//Cart Route
+app.use("/api/cart" , cartRoutes)
 
 app.get("/" , (req,res) =>
 {

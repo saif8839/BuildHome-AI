@@ -13,6 +13,7 @@ import vendorRoutes from "./routes/vendorRoutes.js"
 import productRoutes from "./routes/productRoutes.js"
 import couponRoutes from "./routes/couponRoutes.js"
 import cartRoutes from "./routes/cartRoutes.js"
+import orderRoutes from "./routes/orderRoute.js"
 
 const PORT = process.env.PORT || 5000
 const app = express()
@@ -43,6 +44,9 @@ app.use("/api/coupons" , couponRoutes)
 
 //Cart Route
 app.use("/api/cart" , cartRoutes)
+
+//Order Route
+app.use("/api/order" , orderRoutes)
 
 app.get("/" , (req,res) =>
 {

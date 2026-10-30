@@ -41,7 +41,6 @@ const becomeVendor = async (req, res) =>
        vendorExist.phone = phone 
        vendorExist.address = address
        vendorExist.category = category
-
        vendorExist.status = "pending"
 
        await vendorExist.save()
@@ -384,7 +383,6 @@ const updateCoupon = async (req ,res) =>
             coupon : updatedCoupon
         }
     )
-
 }
 
 const vendorController = {

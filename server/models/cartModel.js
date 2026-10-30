@@ -24,6 +24,26 @@ const cartProductSchema = new mongoose.Schema(
     }
 )
 
+
+const appliedCartCouponSchema = new mongoose.Schema(
+    {
+        vendor : {
+            type : mongoose.Schema.Types.ObjectId,
+            ref : "vendor",
+            required : true
+        },
+        coupon : {
+            type : mongoose.Schema.Types.ObjectId,
+            ref : "Coupon",
+            required : true 
+        }
+    },
+    {
+        _id : false 
+    }
+)
+
+
 const cartSchema = new mongoose.Schema(
     {
         user : {
@@ -34,6 +54,10 @@ const cartSchema = new mongoose.Schema(
         },
         products : {
             type : [cartProductSchema],
+            default : []
+        },
+        appliedCoupons :{
+            type : [appliedCartCouponSchema],
             default : []
         }
     },

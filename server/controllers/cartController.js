@@ -10,7 +10,7 @@ const getCart = async (req, res) => {
         return res.status(200).json({
             productCount: 0,
             cart: {
-                user: userId,
+                user: req.user._id,
                 products: []
             }
         });
@@ -116,6 +116,7 @@ const addToCart = async (req, res) => {
 
     return res.status(200).json({
         message: "Product added to cart successfully!",
+        productCount : cart.products.length,
         cart,
     });
 };

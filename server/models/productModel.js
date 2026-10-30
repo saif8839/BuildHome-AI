@@ -70,7 +70,7 @@ const productSchema = new mongoose.Schema(
       default: 0,
       min: [0, "Stock cannot be negative"],
       validate: {
-        validator: Number.isFinite,
+        validator: Number.isFinite && Number.isSafeInteger,
         message: "Stock must be a finite number"
       }
     },

@@ -1,10 +1,19 @@
 import Cart from "../models/cartModel.js"
+import calculateTaxTotal from "../features/calculateTaxTotal.js"
+import Order from "../models/orderModel.js"
+import mongoose from "mongoose"
+import {randomUUID} from "node:crypto"
 
 
 const createOrder = async (req, res) => {
     const userId = req.user._id
 
-    const { shippingAddress } = req.body
+    const { shippingAddress, paymentMethod } = req.body
+
+    if (!["online", "cod"].includes(paymentMethod)) {
+        res.status(400);
+        throw new Error("Please select a valid payment method!");
+    }
 
     // console.log(shippingAddress)
 
@@ -52,7 +61,9 @@ const createOrder = async (req, res) => {
     }
 
     await cart.populate("products.product")
+    await cart.populate("appliedCoupons.coupon")
 
+    // Cart Validation
     const inactiveProducts = cart.products.filter(
         (item) =>
             !item.product || item.product.isActive !== true
@@ -68,7 +79,7 @@ const createOrder = async (req, res) => {
         throw new Error(`These Products have been disabled by Vendor , please remove from the cart => ${inactiveProductsName.join(", ")}`)
     }
 
-      const insufficientStockProducts = cart.products.filter(
+    const insufficientStockProducts = cart.products.filter(
         (item) => item.product.stock < item.quantity
     );
 
@@ -80,49 +91,241 @@ const createOrder = async (req, res) => {
         );
     }
 
-const orderItems = cart.products.map(({product, quantity}) => {
-    const {_id , productName , price , vendor ,unit} = product
-    const subTotal = price * quantity
-    // console.log(_id , productName , price , vendor ,unit , subTotal)
-        return{
-        product : _id,
-        vendor : vendor,
-        productName : productName,
-        unit : unit,
-        quantity : quantity,
-        unitPrice : price,
-        subTotal : subTotal
+    // Coupon Validation
+    const productVendorIds = cart.products.map(
+        item => item.product.vendor.toString()
+    );
+
+    for (const applied of cart.appliedCoupons) {
+        const coupon = applied.coupon
+        const vendorId = applied.vendor.toString()
+
+        if (!coupon) {
+            res.status(409);
+            throw new Error("An applied coupon no longer exists!");
+        }
+
+        // Check whether vendor has products in cart
+        if (!productVendorIds.includes(vendorId)) {
+            res.status(409);
+            throw new Error(
+                `Invalid coupon selection for vendor ${vendorId}`
+            );
+        }
+
+        //check Coupon Ownership
+        if (coupon.vendor.toString() !== vendorId) {
+            res.status(409);
+            throw new Error("Coupon does not belong to the selected vendor!");
+        }
+
+        if (!coupon.isActive) {
+            res.status(409)
+            throw new Error(`Coupon ${coupon.couponCode} is no longer active!`);
+        }
+
+        // Check expiration
+        if (coupon.expiresAt && coupon.expiresAt <= new Date()) {
+            res.status(409);
+            throw new Error(
+                `Coupon ${coupon.couponCode} has expired!`
+            );
+        }
     }
-}) 
 
-const itemsByVendor = orderItems.reduce((acc, item) => {
-    const vendorId = item.vendor.toString();
-    if (!acc[vendorId]) {
-        acc[vendorId] = [];
-    }
-    acc[vendorId].push(item);
-    return acc;
-}, {});
-// console.log(sortByVendorProducts)
+    const orderItems = cart.products.map(({ product, quantity }) => {
+        const { _id, productName, price, vendor, unit } = product
+        const subTotal = price * quantity
+        // console.log(_id , productName , price , vendor ,unit , subTotal)
+        return {
+            product: _id,
+            vendor: vendor,
+            productName: productName,
+            unit: unit,
+            quantity: quantity,
+            unitPrice: price,
+            subTotal: subTotal
+        }
+    })
 
-// console.log(orderItems)
+    // const orderItems
+    const itemsByVendor = orderItems.reduce((acc, item) => {
+        const vendorId = item.vendor.toString();
+        if (!acc[vendorId]) {
+            acc[vendorId] = [];
+        }
+        acc[vendorId].push(item);
+        return acc;
+    }, {});
+    // console.log(sortByVendorProducts)
 
-const vendorOrders = Object.entries(itemsByVendor).map(([vendorId , items]) =>{
-    return {
-        vendor : vendorId,
-        items,
-        itemsTotal : items.reduce((acc , {subTotal} ) => acc+=subTotal ,0)
-    }
-} )
+    // console.log(orderItems)
 
-// console.log(vendorOrders)
+    const vendorOrders = Object.entries(itemsByVendor).map(([vendorId, items]) => {
+        return {
+            vendor: vendorId,
+            items,
+            itemsTotal: items.reduce((acc, { subTotal }) => acc += subTotal, 0),
+        }
+    })
+
+    // const discountedVendorOrders = [];
+
+    // const appliedCouponVendorIds = cart.appliedCoupons.map(appliedCoupon => appliedCoupon.vendor.toString())
+
+    // // console.log(appliedCouponVendorIds)
+
+    // for(const order of vendorOrders)
+    // {
+    //     if(!appliedCouponVendorIds.includes(order.vendor))
+    //     {
+    //         order.appliedCoupon = null
+    //         discountedVendorOrders.push(order)
+    //         continue
+    //     }        
+
+    //     const discountedOrder = cart.appliedCoupons.map((appliedCoupon)=>
+    //     {
+    //         if(appliedCoupon.vendor.toString() === order.vendor.toString())
+    //         {
+    //             return {
+    //                 ...order,
+    //                 appliedCoupon : appliedCoupon.coupon,
+    //             }
+    //         }
+    //     }
+    //     )
+    //     const newOrder = discountedOrder[0]
+    //     discountedVendorOrders.push(newOrder)
+    // }
+
+    // console.log(discountedVendorOrders)
+
+    const discountedVendorOrders = vendorOrders.map((order) => {
+
+        // Find the coupon belonging to this vendor
+        const selectedCoupon = cart.appliedCoupons.find(
+            (applied) =>
+                applied.vendor.toString() === order.vendor
+        );
+
+        // If this vendor has no applied coupon
+        if (!selectedCoupon) {
+            return {
+                ...order,
+                discountTotal: 0,
+                appliedCoupon: null
+            };
+        }
+
+        // Get the populated Coupon document
+        const aCoupon = selectedCoupon.coupon;
+
+        if (!aCoupon) {
+            throw new Error("Applied coupon no longer exists!");
+        }
+
+        let discountAmount = 0;
+
+        // 4 calculate precentage Discount
+
+        if (aCoupon.discountType === "percentage") {
+
+            // 4. Calculate percentage discount
+            discountAmount = (order.itemsTotal * aCoupon.couponDiscount) / 100;
+        }
+        else if (aCoupon.discountType === "fixed") {
+
+            // 5. Calculate fixed discount
+            discountAmount = Math.min(
+                aCoupon.couponDiscount,
+                order.itemsTotal
+            );
+        }
+        else {
+            // 6. Handle unexpected discount types
+            throw new Error("Invalid coupon discount type!");
+        }
+
+        discountAmount = Math.round((discountAmount + Number.EPSILON) * 100) / 100;
+
+        return {
+            ...order,
+            discountTotal: discountAmount,
+            appliedCoupon: {
+                coupon: aCoupon._id,
+                couponCode: aCoupon.couponCode,
+                discountType: aCoupon.discountType,
+                discountAmount,
+                eligibleSubtotal: order.itemsTotal
+            }
+        }
+    });
+
+    const vendorOrderWithDeliveryAndTax = discountedVendorOrders.map(order => ({
+        ...order,
+        deliveryCharge: 100,
+        taxTotal: calculateTaxTotal(order.itemsTotal - order.discountTotal)
+    }))
+
+    const vendorOrdersWithTotals = vendorOrderWithDeliveryAndTax.map(
+        (order) => {
+
+            const totalAmount =
+                order.itemsTotal -
+                order.discountTotal +
+                order.deliveryCharge +
+                order.taxTotal;
+
+            return {
+                ...order,
+                totalAmount: Math.round(
+                    (totalAmount + Number.EPSILON) * 100
+                ) / 100
+            };
+        }
+    );
+    // console.log(vendorOrdersWithTotals);
+
+    const checkoutId = new mongoose.Types.ObjectId();
+
+    const addressSnapshot = {
+        recipientName: recipientName.trim(),
+        email: email.trim().toLowerCase(),
+        phone: phone.trim(),
+        street: street.trim(),
+        city: city.trim(),
+        state: state.trim(),
+        pincode: pincode.trim(),
+        country: country.trim()
+    };
+
+    const orderDocuments = vendorOrdersWithTotals.map(order => ({
+        
+        orderNumber : `ON-${randomUUID()}`,
+        checkoutId,
+        user : userId,
+        vendor : order.vendor,
+        items : order.items,
+        shippingAddress : addressSnapshot,
+        itemsTotal : order.itemsTotal,
+        discountTotal : order.discountTotal,
+        appliedCoupon : order.appliedCoupon,
+        deliveryCharge : order.deliveryCharge,
+        taxTotal : order.taxTotal,
+        totalAmount : order.totalAmount,
+        paymentMethod,
+        paymentStatus : "pending",
+        orderStatus : "pending"
+    })
+    )
+
+    console.log(orderDocument)
 
     res.status(200).json({
         message: "Order Confirmed!!",
         cart
     })
-
-
 }
 
 

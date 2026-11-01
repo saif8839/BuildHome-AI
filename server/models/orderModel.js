@@ -96,7 +96,7 @@ const orderSchema = new mongoose.Schema(
             index: true,
             ref: "User",
             immutable: true,
-            required : true
+            required: true
         },
         checkoutId: {
             type: mongoose.Schema.Types.ObjectId,
@@ -124,9 +124,9 @@ const orderSchema = new mongoose.Schema(
             }
         },
 
-        appliedCoupons : {
-            type: [appliedCouponSchema],
-            default: []
+        appliedCoupon: {
+            type: appliedCouponSchema,
+            default: null
         },
         shippingAddress: {
             recipientName: {
@@ -222,12 +222,12 @@ const orderSchema = new mongoose.Schema(
                 "delivered",
                 "cancelled",
             ],
-            default : "pending",
-            required : true
+            default: "pending",
+            required: true
         }
     },
     {
-        timestamps : true
+        timestamps: true
     }
 )
 

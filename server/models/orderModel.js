@@ -224,7 +224,18 @@ const orderSchema = new mongoose.Schema(
             ],
             default: "pending",
             required: true
-        }
+        },
+        inventoryStatus: {
+            type: String,
+            enum: ["reserved", "committed", "released"],
+            default: "reserved",
+            required: true
+        },
+
+        reservationExpiresAt: {
+            type: Date,
+            default: null
+        },
     },
     {
         timestamps: true

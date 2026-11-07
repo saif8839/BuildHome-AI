@@ -5,9 +5,7 @@ import upload from "../middlewares/imageUploadMiddleware.js"
 
 const router = express.Router()
 
-
 router.post("/request" , protect.forUser  , vendorController.becomeVendor)
-
 
 router.post("/product" , protect.forUser , upload.array('image' , 8)  , vendorController.addProduct)
 

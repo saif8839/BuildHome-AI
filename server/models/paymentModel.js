@@ -21,7 +21,6 @@ const paymentSchema = new mongoose.Schema({
         enum: ["razorpay" , "mock"],
         default: "mock",
         required: true
-
     },
     providerOrderId: {
         type: String,

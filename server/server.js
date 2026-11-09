@@ -15,6 +15,8 @@ import couponRoutes from "./routes/couponRoutes.js"
 import cartRoutes from "./routes/cartRoutes.js"
 import orderRoutes from "./routes/orderRoute.js"
 import paymentRoutes from "./routes/paymentRoutes.js"
+import testRoutes from "./routes/testRoutes.js"
+
 
 const PORT = process.env.PORT || 5000
 const app = express()
@@ -49,6 +51,10 @@ app.use("/api/order" , orderRoutes)
 
 //Payment Route
 app.use("/api/payment" , paymentRoutes) 
+
+//test Route
+app.use("/api/test" , testRoutes)
+
 
 app.get("/" , (req,res) =>
 {

@@ -350,13 +350,10 @@ const completeMockPayment = async (req, res) => {
                 orderStatus: order.orderStatus
             }))
         });
-
     }
     finally {
         await session.endSession()
     }
-
-
 }
 
 const paymentController = { createPayment, completeMockPayment }

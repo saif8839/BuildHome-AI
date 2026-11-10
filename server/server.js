@@ -17,12 +17,13 @@ import orderRoutes from "./routes/orderRoute.js"
 import paymentRoutes from "./routes/paymentRoutes.js"
 import testRoutes from "./routes/testRoutes.js"
 
+import startInventoryReservationWorker from "./jobs/inventoryReservationScheduler.js";
 
 const PORT = process.env.PORT || 5000
 const app = express()
 
 //Database connectivity
-connectDB()
+await connectDB()
 
 //Body Parser
 app.use(express.json())
@@ -54,6 +55,9 @@ app.use("/api/payment" , paymentRoutes)
 
 //test Route
 app.use("/api/test" , testRoutes)
+
+// Inventory Cleaner
+startInventoryReservationWorker()
 
 
 app.get("/" , (req,res) =>

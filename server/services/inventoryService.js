@@ -1,125 +1,109 @@
-    import mongoose from "mongoose";
-    import Order from "../models/orderModel.js";
-    import Payment from "../models/paymentModel.js";
-    import Product from "../models/productModel.js";
+import mongoose from "mongoose";
+import Order from "../models/orderModel.js";
+import Payment from "../models/paymentModel.js";
+import Product from "../models/productModel.js";
 
+const releaseExpiredCheckout = async (checkoutId) => {
+    const session = await mongoose.startSession();
+    const now = new Date();
 
+    try {
+        const released = await session.withTransaction(async () => {
 
+            // Fetch only orders eligible for expiry
+            const eligibleOrders = await Order.find({
+                checkoutId,
+                paymentMethod: "online",
+                paymentStatus: "pending",
+                orderStatus: "pending",
+                inventoryStatus: "reserved",
+                reservationExpiresAt: { $lte: now }
+            }).session(session);
 
-    const releaseExpiredCheckout = async (checkoutId) => {
-        const session = await mongoose.startSession()
-        const now = new Date()
+            if (eligibleOrders.length === 0) {
+                return false;
+            }
 
-        try {
+            // Collect the quantity to restore for each product
+            const stockRestore = new Map();
 
-            const released = await session.withTransaction(async () => {
+            for (const order of eligibleOrders) {
+                for (const item of order.items) {
+                    const productId = item.product.toString();
 
-                const orders = await Order.find({ checkoutId }).session(session)
+                    const currentQuantity = stockRestore.get(productId) || 0;
 
-                if (orders.length === 0) {
-                    return false
+                    stockRestore.set(
+                        productId,
+                        currentQuantity + item.quantity
+                    );
                 }
+            }
 
-                const canRelease = orders.every((order) =>
-
-                    order.paymentMethod === "online" &&
-                    order.paymentStatus === "pending" &&
-                    order.orderStatus === "pending" &&
-                    order.inventoryStatus === "reserved" &&
-                    order.reservationExpiresAt &&
-                    order.reservationExpiresAt <= now
-                )
-
-                if (!canRelease) {
-                    return false
-                }
-
-                // Collect the quantity to restore for each product
-
-                const stockRestore = new Map()
-
-                for (const order of orders) {
-                    for (const item of order.items) {
-                        const productId = item.product.toString()
-
-                        const currentQuantity = stockRestore.get(productId) || 0
-
-                        stockRestore.set(
-                            productId,
-                            currentQuantity + item.quantity
-                        )
+            // Mark eligible orders as cancelled and inventory released
+            const orderUpdateResult = await Order.updateMany(
+                {
+                    _id: { $in: eligibleOrders.map(order => order._id) },
+                    paymentMethod: "online",
+                    paymentStatus: "pending",
+                    orderStatus: "pending",
+                    inventoryStatus: "reserved",
+                    reservationExpiresAt: { $lte: now }
+                },
+                {
+                    $set: {
+                        orderStatus: "cancelled",
+                        inventoryStatus: "released"
                     }
-                }
+                },
+                { session }
+            );
 
-                // Mark all orders as cancelled and inventory released
+            if (orderUpdateResult.modifiedCount !== eligibleOrders.length) {
+                throw new Error("Could not release all eligible checkout orders!");
+            }
 
-                const orderUpdateResult = await Order.updateMany(
+            // Restore product stock
+            for (const [productId, quantity] of stockRestore) {
+                const stockUpdateResult = await Product.updateOne(
+                    { _id: productId },
                     {
-                        checkoutId,
-                        paymentMethod: "online",
-                        paymentStatus: "pending",
-                        orderStatus: "pending",
-                        inventoryStatus: "reserved",
-                        reservationExpiresAt: { $lte: now }
-                    },
-                    {
-                        $set: {
-                            orderStatus: "cancelled",
-                            inventoryStatus: "released"
+                        $inc: {
+                            stock: quantity
                         }
                     },
                     { session }
                 );
 
-                if (orderUpdateResult.modifiedCount !== orders.length) {
-                    throw new Error("Could not release all checkout orders!");
+                if (stockUpdateResult.matchedCount !== 1) {
+                    throw new Error(
+                        `Product not found while restoring stock: ${productId}`
+                    );
                 }
+            }
 
-
-                for (const [productId, quantity] of stockRestore) {
-                    const stockUpdateResult = await Product.updateOne({ _id: productId },
-                        {
-                            $inc: {
-                                stock: quantity
-                            }
-                        },
-                        { session }
-                    )
-
-                    // if Product Disabled
-                    if (stockUpdateResult.matchedCount !== 1) {
-                        throw new Error(
-                            `Product not found while restoring stock: ${productId}`
-                        );
+            // Expire existing payment attempts because checkout amount changed
+            await Payment.updateMany(
+                {
+                    checkoutId,
+                    status: "created"
+                },
+                {
+                    $set: {
+                        status: "expired"
                     }
-                }
+                },
+                { session }
+            );
 
-                // Expire any payment attempts still awaiting completion
-                await Payment.updateMany(
-                    {
-                        checkoutId,
-                        status: "created"
-                    },
-                    {
-                        $set: {
-                            status: "expired"
-                        }
-                    },
-                    { session }
-                );
-                
-                return true;
+            return true;
+        });
 
-            });
+        return released;
 
-            return released;
-
-        }
-        finally {
-            await session.endSession();
-        }
-
+    } finally {
+        await session.endSession();
     }
+};
 
-
-    export default releaseExpiredCheckout;
+export default releaseExpiredCheckout;

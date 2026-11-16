@@ -20,8 +20,9 @@ const createPayment = async (req, res) => {
 
     const orders = await Order.find({
         user: userId,
-        checkoutId
-    })
+        checkoutId,
+        orderStatus: { $ne: "cancelled" }
+    });
 
     if (orders.length === 0) {
         res.status(404);
@@ -194,8 +195,9 @@ const completeMockPayment = async (req, res) => {
 
             orders = await Order.find({
                 checkoutId: payment.checkoutId,
-                user: userId
-            }).session(session)
+                user: userId,
+                orderStatus: { $ne: "cancelled" }
+            }).session(session);
 
             if (orders.length === 0) {
                 res.status(404)
@@ -321,7 +323,7 @@ const completeMockPayment = async (req, res) => {
             orders = await Order.find({
                 checkoutId: payment.checkoutId,
                 user: userId
-            }).session(session);    
+            }).session(session);
 
         })
 

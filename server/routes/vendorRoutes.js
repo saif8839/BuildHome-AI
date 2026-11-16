@@ -21,4 +21,12 @@ router.post("/coupon" , protect.forUser , vendorController.addCoupons)
 
 router.put("/coupon/:cid" , protect.forUser , vendorController.updateCoupon)
 
+router.get("/orders" , protect.forUser , vendorController.getVendorOrders)
+
+router.get("/orders/:oid" , protect.forUser , vendorController.getSingleVendorOrder)
+
+router.put("/orders/:oid" , protect.forUser , vendorController.updateVendorOrderStatus)
+
+
+
 export default router

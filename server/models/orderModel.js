@@ -236,6 +236,56 @@ const orderSchema = new mongoose.Schema(
             type: Date,
             default: null
         },
+        codCollectedAt: {
+            type: Date,
+            default: null
+        },
+
+        codCollectedBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Vendor",
+            default: null
+        },
+        // Cancellation details
+
+        cancellationReason: {
+            type: String,
+            trim: true,
+            maxlength: [500, "Cancellation reason cannot exceed 500 characters"],
+            default: null
+        },
+
+        cancelledBy: {
+            type: String,
+            enum: ["customer", "vendor", "admin"],
+            default: null
+        },
+
+        cancelledById : {
+            type: mongoose.Schema.Types.ObjectId,
+            default: null
+        },
+
+        cancelledAt: {
+            type: Date,
+            default: null
+        },
+
+        // Refund details
+
+        refundStatus: {
+            type: String,
+            enum: ["not_required", "pending", "processed", "failed"],
+            default: "not_required",
+            required: true
+        },
+
+        refundedAmount: {
+            type: Number,
+            min: [0, "Refund amount cannot be negative"],
+            default: 0,
+            required: true
+        }
     },
     {
         timestamps: true

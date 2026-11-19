@@ -76,4 +76,4 @@ const listenServer = () =>
     console.log(`SERVER IS RUNNING AT ${PORT}`.blue)
 }
 
-app.listen( PORT , listenServer())
+app.listen( PORT , listenServer)

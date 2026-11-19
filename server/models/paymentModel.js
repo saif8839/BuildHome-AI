@@ -18,7 +18,7 @@ const paymentSchema = new mongoose.Schema({
     },
     provider: {
         type: String,
-        enum: ["razorpay" , "mock"],
+        enum: ["razorpay", "mock"],
         default: "mock",
         required: true
     },
@@ -47,14 +47,23 @@ const paymentSchema = new mongoose.Schema({
         required: true
     },
     status: {
-        type: String, 
-        enum: ["created", "captured", "expired", "refunded" , "failed"],
+        type: String,
+        enum: ["created", "captured", "expired", "refunded", "failed", "partially_refunded"],
         default: "created",
         required: true
     },
     capturedAt: {
         type: Date,
         default: null
+    },
+    refundedAmountPaise: {
+        type: Number,
+        default: 0,
+        min: 0,
+        validate: {
+            validator: Number.isSafeInteger,
+            message: "Refunded amount must be a safe integer"
+        }
     },
 },
     {

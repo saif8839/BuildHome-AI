@@ -238,7 +238,7 @@ const cancelOrders = async ({ orderIds, checkoutId, actor, reason }) => {
                         $set: {
                             orderStatus: "cancelled",
                             inventoryStatus: "released",
-
+                            reservationExpiresAt: null,
                             cancellationReason: reason.trim(),
                             cancelledBy: actor.type,
                             cancelledById: actor.id,

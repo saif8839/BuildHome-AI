@@ -4,7 +4,7 @@ import Order from "../models/orderModel.js"
 import mongoose from "mongoose"
 import { randomUUID } from "node:crypto"
 import Product from "../models/productModel.js";
-
+import cancelOrders from "../services/orderCancellationService.js";
 
 const createOrder = async (req, res) => {
     // 1. Extract user and request data
@@ -436,8 +436,88 @@ const createOrder = async (req, res) => {
 
 
 
+const cancelCustomerOrders = async (req, res) => {
+
+    const { orderIds, checkoutId, reason } = req.body ?? {};
+
+    const userId = req.user?._id;
+
+    // 1. Verify authenticated user
+    if (!userId) {
+        res.status(401);
+        throw new Error("Unauthorized access!");
+    }
+
+    // 2. Validate cancellation target
+    const hasOrderIds = orderIds !== undefined;
+    const hasCheckoutId = checkoutId !== undefined;
+
+    if (hasOrderIds === hasCheckoutId) {
+        res.status(400);
+        throw new Error("Provide either orderIds or checkoutId, not both!");
+    }
+
+    // 3. Validate Order IDs
+    if (hasOrderIds) {
+
+        if (!Array.isArray(orderIds) || orderIds.length === 0) {
+            res.status(400);
+            throw new Error("Please provide valid Order IDs!");
+        }
+
+        if (!orderIds.every(id => mongoose.isValidObjectId(id))) {
+            res.status(400);
+            throw new Error("One or more Order IDs are invalid!");
+        }
+
+        const uniqueIds = new Set(orderIds.map(id => id.toString()));
+
+        if (uniqueIds.size !== orderIds.length) {
+            res.status(400);
+            throw new Error("Duplicate Order IDs are not allowed!");
+        }
+    }
+
+    // 4. Validate checkout ID
+    if ( hasCheckoutId && !mongoose.isValidObjectId(checkoutId)) {
+        res.status(400);
+        throw new Error("Invalid checkout ID!");
+    }
+
+    // 5. Validate cancellation reason
+    if (typeof reason !== "string" || !reason.trim() || reason.trim().length > 500) {
+        res.status(400);
+        throw new Error("Please provide a valid cancellation reason!");
+    }
+
+    // 6. Call shared cancellation service
+    const cancelledOrders = await cancelOrders({
+        orderIds,
+        checkoutId,
+
+        actor: {
+            type: "customer",
+            id: userId
+        },
+
+        reason
+    });
+
+    // 7. Send response
+    return res.status(200).json({
+        success: true,
+        message: "Order cancellation completed successfully!",
+        count: cancelledOrders.length,
+        orders: cancelledOrders
+    });
+};
 
 
-const orderController = { createOrder}
+
+
+
+
+const orderController = { createOrder , cancelCustomerOrders }
 
 export default orderController
+

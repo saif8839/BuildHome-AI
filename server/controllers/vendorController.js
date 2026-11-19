@@ -4,6 +4,10 @@ import Order from "../models/orderModel.js"
 import Product from "../models/productModel.js"
 import Vendor from "../models/vendorModel.js"
 import mongoose from "mongoose"
+import cancelOrders from "../services/orderCancellationService.js";
+
+
+
 
 const becomeVendor = async (req, res) => {
     const userId = req.user._id
@@ -601,13 +605,66 @@ const updateVendorOrderStatus = async (req, res) => {
 };
 
 
+const cancelVendorOrder = async (req, res) => {
 
+    const vendor = req.vendor;
+    const { oid } = req.params;
+    const { reason } = req.body ?? {};
+
+    // 1. Validate vendor authentication
+    if (!vendor) {
+        res.status(401);
+        throw new Error("Vendor authentication required!");
+    }
+
+    // 2. Validate vendor account
+    if (vendor.status !== "active" || vendor.isActive !== true) {
+        res.status(403);
+        throw new Error("Your vendor account is not active!");
+    }
+
+    // 3. Validate Order ID
+    if (!mongoose.isValidObjectId(oid)) {
+        res.status(400);
+        throw new Error("Invalid Order ID!");
+    }
+
+    // 4. Validate cancellation reason
+    if (
+        typeof reason !== "string" ||
+        !reason.trim() ||
+        reason.trim().length > 500
+    ) {
+        res.status(400);
+        throw new Error("Please provide a valid cancellation reason!");
+    }
+
+    // 5. Call shared cancellation service
+    const cancelledOrders = await cancelOrders({
+        orderIds: [oid],
+
+        actor: {
+            type: "vendor",
+            id: vendor._id
+        },
+
+        reason
+    });
+
+    // 6. Send response
+    return res.status(200).json({
+        success: true,
+        message: "Order cancelled successfully!",
+        count: cancelledOrders.length,
+        orders: cancelledOrders
+    });
+};
 
 
 
 const vendorController = {
     becomeVendor, addProduct, getMyProducts, updateMyProduct, getAllVendors, getSingleVendor, addCoupons, updateCoupon, getVendorOrders, getSingleVendorOrder,
-    updateVendorOrderStatus
+    updateVendorOrderStatus , cancelVendorOrder
 }
 
 

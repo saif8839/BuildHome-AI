@@ -261,7 +261,7 @@ const orderSchema = new mongoose.Schema(
             default: null
         },
 
-        cancelledById : {
+        cancelledById: {
             type: mongoose.Schema.Types.ObjectId,
             default: null
         },
@@ -285,6 +285,15 @@ const orderSchema = new mongoose.Schema(
             min: [0, "Refund amount cannot be negative"],
             default: 0,
             required: true
+        },
+        refundId: {
+            type: String,
+            default: null
+        },
+
+        refundedAt: {
+            type: Date,
+            default: null
         }
     },
     {

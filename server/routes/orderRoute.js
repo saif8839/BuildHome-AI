@@ -7,6 +7,8 @@ const router = express.Router()
 
 router.post("/create" , protect.forUser ,orderController.createOrder)
 
+router.post("/cancel" , protect.forUser ,orderController.cancelCustomerOrders)
+
 
 
 

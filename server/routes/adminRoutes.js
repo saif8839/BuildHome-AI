@@ -1,6 +1,7 @@
 import adminController from "../controllers/adminController.js"
 import express from "express"
 import protect from "../middlewares/authMiddleware.js"
+import refundController from "../controllers/refundController.js";
 
 const router =  express.Router()
 
@@ -24,5 +25,12 @@ router.post("/category/add" , protect.forAdmin , adminController.addProductCateg
 router.get("/category" , protect.forAdmin , adminController.getProductCategory)
 
 router.put("/category/:did" , protect.forAdmin , adminController.removeProductCategory)
+
+router.post("/orders/:oid/refund" , protect.forAdmin , refundController.processRefund)
+
+router.get("/refunds/pending" , protect.forAdmin , refundController.getPendingRefunds)
+
+router.get("/refunds/history" , protect.forAdmin , refundController.getRefundHistory)
+
 
 export default router

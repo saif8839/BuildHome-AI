@@ -27,6 +27,8 @@ router.get("/orders/:oid" , protect.forUser , vendorController.getSingleVendorOr
 
 router.put("/orders/:oid" , protect.forUser , vendorController.updateVendorOrderStatus)
 
+router.post("/orders/:oid/cancel" , protect.forUser , vendorController.cancelVendorOrder)
+
 
 
 export default router

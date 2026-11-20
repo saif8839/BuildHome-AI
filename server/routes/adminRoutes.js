@@ -5,7 +5,6 @@ import refundController from "../controllers/refundController.js";
 
 const router =  express.Router()
 
-
 router.get("/users" , protect.forAdmin , adminController.getAllUsers )
 
 router.get("/vendors" , protect.forAdmin , adminController.getAllVendors)

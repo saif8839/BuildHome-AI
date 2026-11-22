@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
 const productSchema = new mongoose.Schema(
-{
+  {
     productName: {
       type: String,
       required: [true, "Product name is required"],
@@ -11,31 +11,31 @@ const productSchema = new mongoose.Schema(
     },
 
     description: {
-         type: String,
+      type: String,
       required: [true, "Product description is required"],
       trim: true,
       minlength: [10, "Description must be at least 10 characters"],
       maxlength: [2000, "Description cannot exceed 2000 characters"]
-    }, 
-    
-    brand  :  {
-         type: String,
+    },
+
+    brand: {
+      type: String,
       required: [true, "Brand is required"],
       trim: true,
       minlength: [1, "Brand cannot be empty"],
       maxlength: [100, "Brand cannot exceed 100 characters"]
     },
 
-    price:  {
+    price: {
       type: Number,
       required: [true, "Product price is required"],
       min: [0, "Price cannot be negative"],
-        validate: {
-          validator: Number.isFinite,
-          message: "Price must be a finite number"
-        }
+      validate: {
+        validator: Number.isFinite,
+        message: "Price must be a finite number"
+      }
     },
-  image: {
+    image: {
       type: [{
         type: String,
         trim: true
@@ -53,15 +53,15 @@ const productSchema = new mongoose.Schema(
     },
 
     category: {
-        type : mongoose.Schema.Types.ObjectId,
-        ref : "Category",
-        required : true
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Category",
+      required: true
     },
 
     vendor: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Vendor",
-        required: true
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Vendor",
+      required: true
     },
 
     stock: {
@@ -70,12 +70,13 @@ const productSchema = new mongoose.Schema(
       default: 0,
       min: [0, "Stock cannot be negative"],
       validate: {
-        validator: Number.isFinite && Number.isSafeInteger,
+        validator: value =>
+          Number.isFinite(value) && Number.isSafeInteger(value),
         message: "Stock must be a finite number"
       }
     },
 
-     unit: {
+    unit: {
       type: String,
       required: [true, "Selling unit is required"],
       enum: [
@@ -94,18 +95,38 @@ const productSchema = new mongoose.Schema(
     },
 
     isActive: {
-        type: Boolean,
-        default: true
-    } 
-},
-{
+      type: Boolean,
+      default: true
+    },
+    ratingAverage: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 5,
+      validate: {
+        validator: Number.isFinite,
+        message: "Average rating must be finite"
+      }
+    },
+
+    ratingCount: {
+      type: Number,
+      default: 0,
+      min: 0,
+      validate: {
+        validator: Number.isSafeInteger,
+        message: "Rating count must be a positive safe integer"
+      }
+    }
+  },
+  {
     timestamps: true
-});
+  });
 
 
 
 
-const Product = mongoose.model("Product" , productSchema)
+const Product = mongoose.model("Product", productSchema)
 
 
 export default Product

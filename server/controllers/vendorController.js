@@ -1,11 +1,12 @@
-import uploadToCloudinary from "../middlewares/cloudinaryUploadMiddlware.js"
 import Coupon from "../models/couponModel.js"
 import Order from "../models/orderModel.js"
 import Product from "../models/productModel.js"
 import Vendor from "../models/vendorModel.js"
 import mongoose from "mongoose"
 import cancelOrders from "../services/orderCancellationService.js";
+import uploadToCloudinary, { deleteFromCloudinary} from "../middlewares/cloudinaryUploadMiddlware.js";
 
+import Category from "../models/categoryModel.js";
 
 
 
@@ -83,51 +84,61 @@ const becomeVendor = async (req, res) => {
 
 const addProduct = async (req, res) => {
 
-    const { productName, brand, category, price, stock, description, unit } = req.body
+    const {
+        productName,
+        brand,
+        category,
+        price,
+        stock,
+        description,
+        unit
+    } = req.body;
 
-    const allowedUnits = ["piece", "bag", "kg", "ton", "liter", "meter", "square_feet", "cubic_feet",
-        "cubic_meter", "box", "bundle"]
+    const allowedUnits = [
+        "piece", "bag", "kg", "ton", "liter", "meter",
+        "square_feet", "cubic_feet", "cubic_meter",
+        "box", "bundle"
+    ];
 
+    // 1. Validate required fields
+    if (
+        !productName?.trim() ||
+        !brand?.trim() ||
+        !category ||
+        price == null || price === "" ||
+        stock == null || stock === "" ||
+        !description?.trim() ||
+        !unit
+    ) {
+        return res.status(400).json({
+            message: "Please provide all required product details."
+        });
+    }
+
+    // 2. Validate unit
     if (!allowedUnits.includes(unit)) {
         return res.status(400).json({
             message: "Please choose a valid unit."
         });
     }
 
-    // 1. Check required request fields
-    if (productName == null || brand == null || category == null || price == null || price === "" || stock == null || stock === "" || description == null || unit == null) {
+    // 3. Validate price and stock
+    if (!Number.isFinite(Number(price)) || Number(price) < 0) {
         return res.status(400).json({
-            message: "Please provide all required product details."
+            message: "Please provide a valid price."
         });
     }
 
-    // console.log(req.files)
-
-    // 2. Check uploaded files
-    if (!req.files || req.files.length === 0) {
+    if (!Number.isSafeInteger(Number(stock)) || Number(stock) < 0) {
         return res.status(400).json({
-            message: "Upload at least one product image."
+            message: "Stock must be a valid non-negative integer."
         });
     }
 
+    // 4. Find the authenticated user's vendor account
+    const userId = req.user._id;
 
-    // const image = req.files.map(file => file.filename);
-    // console.log(image)
-
-    // Upload To Cloudinary
-
-    const uploadResults = await Promise.all(req.files.map(file => uploadToCloudinary(file.path)));
-
-    // console.log(uploadResults)
-
-    const image = uploadResults.map(result => result.url);
-
-    // console.log(image)
-
-    // 3. Find the authenticated user's vendor account
-    const userId = req.user._id
-
-    const vendorExist = await Vendor.findOne({ user: userId })
+    const vendorExist = await Vendor.findOne({ user: userId });
 
     if (!vendorExist) {
         return res.status(403).json({
@@ -135,51 +146,77 @@ const addProduct = async (req, res) => {
         });
     }
 
-    // 4. Check vendor approval
+    // 5. Check vendor approval
     if (vendorExist.status !== "active") {
         return res.status(403).json({
             message: "Your vendor account is not active."
         });
     }
 
-    //  // 5. Check that the category exists
-    // if (!mongoose.isObjectIdOrHexString(category)) {
-    //     return res.status(400).json({
-    //         message: "Invalid category ID."
-    //     });
-    // }
+    // 6. Validate category ID
+    if (!mongoose.isObjectIdOrHexString(category)) {
+        return res.status(400).json({
+            message: "Invalid category ID."
+        });
+    }
 
-    // const categoryExist = await Category.findById(category);
+    // 7. Check whether category exists
+    const categoryExist = await Category.findById(category);
 
-    // if (!categoryExist) {
-    //     return res.status(400).json({
-    //         message: "Selected category does not exist."
-    //     });
-    // }
+    if (!categoryExist) {
+        return res.status(400).json({
+            message: "Selected category does not exist."
+        });
+    }
 
+    // 8. Check uploaded files
+    if (!req.files || req.files.length === 0) {
+        return res.status(400).json({
+            message: "Upload at least one product image."
+        });
+    }
 
+    // 9. Upload images to Cloudinary
+    const uploadResults = await Promise.all(
+        req.files.map(file => uploadToCloudinary(file.path))
+    );
+
+    const image = uploadResults.map(result => result.url);
+
+    const imagePublicIds = uploadResults.map(
+        result => result.publicId
+    );
+
+    // 10. Create product
     const product = {
-        productName, image, brand, category, price, stock, description, vendor: vendorExist._id, unit
-    }
+        productName,
+        image,
+        imagePublicIds,
+        brand,
+        category,
+        price: Number(price),
+        stock: Number(stock),
+        description,
+        vendor: vendorExist._id,
+        unit
+    };
 
-    const newProduct = await Product.create(product)
+    const newProduct = await Product.create(product);
 
-    if (!newProduct) {
-        res.status(404)
-        throw new Error("Product Not Created!!!")
-    }
+    // 11. Populate vendor and category details
+    await newProduct.populate(
+        "vendor",
+        "businessName email phone address.city address.street -_id"
+    );
 
-    await newProduct.populate("vendor", "businessName email phone address.city address.street -_id")
-    await newProduct.populate("category", "name -_id")
+    await newProduct.populate("category", "name -_id");
 
-    // console.log(newProduct)
-
-    res.status(200).json({
-        message: "product Created Successfully...",
+    // 12. Send response
+    return res.status(201).json({
+        message: "Product created successfully.",
         product: newProduct
-    })
-}
-
+    });
+};
 
 
 
@@ -212,32 +249,232 @@ const getMyProducts = async (req, res) => {
 };
 
 const updateMyProduct = async (req, res) => {
-    const productId = req.params.pid
-    const vendorId = req.vendor._id
 
-    const product = await Product.findById(productId)
+    const { pid } = req.params;
+    const vendorId = req.vendor?._id;
+
+    // 1. Validate product ID
+    if (!mongoose.isValidObjectId(pid)) {
+        return res.status(400).json({
+            message: "Invalid Product ID."
+        });
+    }
+
+    if (!vendorId) {
+        return res.status(403).json({
+            message: "Vendor account not found."
+        });
+    }
+
+    // 2. Find product
+    const product = await Product.findById(pid);
 
     if (!product) {
-        res.status(404)
-        throw new Error("No Such Product Exist or Invalid Product Id!!!")
+        return res.status(404).json({
+            message: "Product not found."
+        });
     }
 
+    // 3. Check product ownership
     if (product.vendor.toString() !== vendorId.toString()) {
-        res.status(409)
-        throw new Error("Unable To Update Product")
+        return res.status(403).json({
+            message: "You are not authorized to update this product."
+        });
     }
 
+    // 4. Extract only permitted fields
+    const allowedFields = [
+        "productName",
+        "brand",
+        "category",
+        "price",
+        "stock",
+        "description",
+        "unit"
+    ];
 
-    const updatedProduct = await Product.findByIdAndUpdate(productId, req.body, { new: true, runValidators: true })
+    const updates = {};
 
-    if (!updatedProduct) {
-        res.status(409)
-        throw new Error("Product Not Updated!!!")
+    for (const field of allowedFields) {
+        if (req.body[field] !== undefined) {
+            updates[field] = req.body[field];
+        }
     }
 
-    res.status(200).json(updatedProduct)
-}
+    // 5. Validate supplied string fields
+    for (const field of ["productName", "brand", "description"]) {
+        if (updates[field] !== undefined) {
 
+            if (
+                typeof updates[field] !== "string" ||
+                !updates[field].trim()
+            ) {
+                return res.status(400).json({
+                    message: `${field} cannot be empty.`
+                });
+            }
+
+            updates[field] = updates[field].trim();
+        }
+    }
+
+    // 6. Validate price
+    if (updates.price !== undefined) {
+
+        const price = Number(updates.price);
+
+        if (!Number.isFinite(price) || price < 0) {
+            return res.status(400).json({
+                message: "Please provide a valid price."
+            });
+        }
+
+        updates.price = price;
+    }
+
+    // 7. Validate stock
+    if (updates.stock !== undefined) {
+
+        const stock = Number(updates.stock);
+
+        if (!Number.isSafeInteger(stock) || stock < 0) {
+            return res.status(400).json({
+                message: "Please provide a valid stock quantity."
+            });
+        }
+
+        updates.stock = stock;
+    }
+
+    // 8. Validate unit
+    const allowedUnits = [
+        "piece", "bag", "kg", "ton", "liter", "meter",
+        "square_feet", "cubic_feet", "cubic_meter",
+        "box", "bundle"
+    ];
+
+    if (
+        updates.unit !== undefined &&
+        !allowedUnits.includes(updates.unit)
+    ) {
+        return res.status(400).json({
+            message: "Please choose a valid unit."
+        });
+    }
+
+    // 9. Validate category if supplied
+    if (updates.category !== undefined) {
+
+        if (!mongoose.isObjectIdOrHexString(updates.category)) {
+            return res.status(400).json({
+                message: "Invalid category ID."
+            });
+        }
+
+        const categoryExist = await Category.findById(updates.category);
+
+        if (!categoryExist) {
+            return res.status(400).json({
+                message: "Selected category does not exist."
+            });
+        }
+    }
+
+    // 10. Check whether anything was provided
+    const hasNewImages = req.files && req.files.length > 0;
+
+    if (Object.keys(updates).length === 0 && !hasNewImages) {
+        return res.status(400).json({
+            message: "Please provide at least one field or image to update."
+        });
+    }
+
+    // 11. Upload new images if provided
+    let uploadResults = [];
+
+    if (hasNewImages) {
+
+        const results = await Promise.allSettled(
+            req.files.map(file => uploadToCloudinary(file.path))
+        );
+
+        const failedUpload = results.find(
+            result => result.status === "rejected"
+        );
+
+        uploadResults = results
+            .filter(result => result.status === "fulfilled")
+            .map(result => result.value);
+
+        // Clean up successfully uploaded images if another upload failed
+        if (failedUpload) {
+
+            await Promise.allSettled(
+                uploadResults.map(result =>
+                    deleteFromCloudinary(result.publicId)
+                )
+            );
+
+            throw failedUpload.reason;
+        }
+
+        updates.image = uploadResults.map(result => result.url);
+
+        updates.imagePublicIds = uploadResults.map(
+            result => result.publicId
+        );
+    }
+
+    // 12. Keep old Cloudinary IDs for deletion after successful update
+    const oldImagePublicIds = [...(product.imagePublicIds || [])];
+
+    // 13. Update product document
+    try {
+
+        product.set(updates);
+
+        await product.save();
+
+    } catch (error) {
+
+        // Remove newly uploaded images if database update fails
+        await Promise.allSettled(
+            uploadResults.map(result =>
+                deleteFromCloudinary(result.publicId)
+            )
+        );
+
+        throw error;
+    }
+
+    // 14. Delete old Cloudinary images after successful replacement
+    if (hasNewImages && oldImagePublicIds.length > 0) {
+
+        const deletionResults = await Promise.allSettled(
+            oldImagePublicIds.map(publicId =>
+                deleteFromCloudinary(publicId)
+            )
+        );
+
+        deletionResults.forEach((result, index) => {
+            if (result.status === "rejected") {
+                console.error(
+                    `Failed to delete old Cloudinary image ${oldImagePublicIds[index]}:`,
+                    result.reason
+                );
+            }
+        });
+    }
+
+    // 15. Populate and respond
+    await product.populate("vendor", "businessName email phone");
+    await product.populate("category", "name");
+
+    return res.status(200).json({
+        message: "Product updated successfully.",
+        product
+    });
+};
 
 const getAllVendors = async (req, res) => {
     const vendors = await Vendor.find({ isActive: { $eq: true } }).populate("user", "name email phone role avatar").sort({ createdAt: -1 });
@@ -443,7 +680,7 @@ const updateVendorOrderStatus = async (req, res) => {
         rawCodPaymentCollected === true ||
         rawCodPaymentCollected === "true";
 
-        // if (nextStatus === "delivered" && !codPaymentCollected) {
+    // if (nextStatus === "delivered" && !codPaymentCollected) {
     //     res.status(400)
     //     throw new Error("Please confirm if the Payment is Collected Before changing the Order Status to Delivered!!")
     // }
@@ -664,7 +901,7 @@ const cancelVendorOrder = async (req, res) => {
 
 const vendorController = {
     becomeVendor, addProduct, getMyProducts, updateMyProduct, getAllVendors, getSingleVendor, addCoupons, updateCoupon, getVendorOrders, getSingleVendorOrder,
-    updateVendorOrderStatus , cancelVendorOrder
+    updateVendorOrderStatus, cancelVendorOrder
 }
 
 

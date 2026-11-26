@@ -117,7 +117,14 @@ const productSchema = new mongoose.Schema(
         validator: Number.isSafeInteger,
         message: "Rating count must be a positive safe integer"
       }
-    }
+    },
+    imagePublicIds: {
+      type: [{
+        type: String,
+        trim: true
+      }],
+      default: []
+    },
   },
   {
     timestamps: true

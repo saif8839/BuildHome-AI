@@ -40,7 +40,9 @@ const uploadToCloudinary = async (filePath) =>
     }
 };
 
-
+export const deleteFromCloudinary = async (publicId) => {
+    return await cloudinary.uploader.destroy(publicId);
+};
 
 
 

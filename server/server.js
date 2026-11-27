@@ -17,6 +17,7 @@ import orderRoutes from "./routes/orderRoute.js"
 import paymentRoutes from "./routes/paymentRoutes.js"
 import testRoutes from "./routes/testRoutes.js"
 import ratingRoutes from "./routes/ratingRoutes.js"
+import blueprintRoutes from "./routes/blueprintRoute.js"
 
 import startInventoryReservationWorker from "./jobs/inventoryReservationScheduler.js";
 
@@ -56,6 +57,9 @@ app.use("/api/payment" , paymentRoutes)
 
 //Rating Route
 app.use("/api/ratings" , ratingRoutes)
+
+// Blueprint Routes 
+app.use("/api/blueprint" , blueprintRoutes)
 
 
 //test Route

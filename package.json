@@ -12,6 +12,8 @@
     "seed": "node server/seed.js"
   },
   "dependencies": {
+    "@google/genai": "^3.6.1",
+    "ajv": "^8.20.0",
     "bcrypt": "^6.0.0",
     "bcryptjs": "^3.0.3",
     "cloudinary": "^2.11.0",
@@ -23,6 +25,7 @@
     "mongoose": "^9.6.3",
     "multer": "^2.2.0",
     "node": "^27.0.0-alpha.0.0.0",
-    "node-cron": "^4.6.0"
+    "node-cron": "^4.6.0",
+    "polygon-clipping": "^0.15.7"
   }
 }

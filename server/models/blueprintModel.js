@@ -1,4 +1,3 @@
-
 import mongoose from "mongoose";
 
 const compassDirections = [
@@ -12,17 +11,90 @@ const compassDirections = [
     "northwest"
 ];
 
+
 // Each coordinate represents one corner of the plot.
 // X increases towards east; Y increases towards north.
 const pointSchema = new mongoose.Schema({
+
     x: {
         type: Number,
         required: true
     },
+
     y: {
         type: Number,
         required: true
     }
+
+}, { _id: false });
+
+
+// Represents an individual buildable region.
+const buildableRegionSchema = new mongoose.Schema({
+
+    boundary: {
+        type: [pointSchema],
+        required: true,
+        validate: {
+            validator: points =>
+                Array.isArray(points) && points.length >= 3,
+            message: "A buildable region requires at least 3 points."
+        }
+    },
+
+    holes: {
+        type: [[pointSchema]],
+        default: []
+    },
+
+    area: {
+        type: Number,
+        required: true,
+        min: 0
+    }
+
+}, { _id: false });
+
+
+// Stores server-calculated plot geometry.
+// Areas use the square of plot.unit.
+const plotGeometrySchema = new mongoose.Schema({
+
+    plotArea: {
+        type: Number,
+        required: true,
+        min: 0
+    },
+
+    buildableArea: {
+        type: Number,
+        required: true,
+        min: 0
+    },
+
+    setbackArea: {
+        type: Number,
+        required: true,
+        min: 0
+    },
+
+    buildablePercentage: {
+        type: Number,
+        required: true,
+        min: 0,
+        max: 100
+    },
+
+    buildableRegions: {
+        type: [buildableRegionSchema],
+        required: true,
+        validate: {
+            validator: regions =>
+                Array.isArray(regions) && regions.length > 0,
+            message: "At least one buildable region is required."
+        }
+    }
+
 }, { _id: false });
 
 
@@ -230,6 +302,18 @@ const blueprintSchema = new mongoose.Schema({
         default: []
     },
 
+    // Server-calculated plot and buildable geometry.
+    geometry: {
+        type: plotGeometrySchema,
+        required: true
+    },
+
+    // Server-calculated preliminary space feasibility report.
+    feasibilityReport: {
+        type: mongoose.Schema.Types.Mixed,
+        default: null
+    },
+
     requirements: {
         type: requirementsSchema,
         required: true
@@ -248,23 +332,28 @@ const blueprintSchema = new mongoose.Schema({
     },
 
     jurisdiction: {
+
         country: {
             type: String,
             default: "India",
             trim: true,
             maxlength: 100
         },
+
         state: {
             type: String,
             trim: true,
             maxlength: 100
         },
+
         city: {
             type: String,
             trim: true,
             maxlength: 100
         }
+
     },
+
     status: {
         type: String,
         enum: [

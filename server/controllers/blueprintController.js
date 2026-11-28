@@ -1,6 +1,11 @@
-
 import Blueprint from "../models/blueprintModel.js";
-import { validatePlotGeometry } from "../services/plotGeometryService.js";
+import {
+    calculateSpaceFeasibility
+} from "../services/spaceFeasibilityService.js";
+import {
+    calculateBuildableArea
+} from "../services/buildableAreaService.js";
+
 
 const createBlueprint = async (req, res) => {
 
@@ -15,6 +20,7 @@ const createBlueprint = async (req, res) => {
         });
     }
 
+
     // 2. Extract blueprint details
     const {
         title,
@@ -27,12 +33,15 @@ const createBlueprint = async (req, res) => {
         jurisdiction
     } = req.body;
 
+
     // 3. Validate required fields
     if (!buildingType || !plot || !requirements) {
+
         return res.status(400).json({
             message: "Building type, plot details and requirements are required."
         });
     }
+
 
     // 4. Validate plot object
     if (
@@ -44,6 +53,7 @@ const createBlueprint = async (req, res) => {
             message: "Plot must be a valid object."
         });
     }
+
 
     // 5. Validate building type
     const allowedBuildingTypes = [
@@ -59,10 +69,12 @@ const createBlueprint = async (req, res) => {
     ];
 
     if (!allowedBuildingTypes.includes(buildingType)) {
+
         return res.status(400).json({
             message: "Invalid building type."
         });
     }
+
 
     // 6. Validate plot structure
     if (
@@ -78,6 +90,7 @@ const createBlueprint = async (req, res) => {
         });
     }
 
+
     // 7. Validate setbacks array
     if (
         setbacks !== undefined &&
@@ -88,19 +101,29 @@ const createBlueprint = async (req, res) => {
         });
     }
 
-    // 8. Validate plot geometry
-    const geometryResult = validatePlotGeometry({
+
+    // 8. Validate plot and calculate buildable geometry
+    const geometryResult = calculateBuildableArea({
+
         boundary: plot.boundary,
+
         roadEdgeIndex: plot.roadEdgeIndex,
+
         setbacks: setbacks ?? []
     });
 
+
+    // Reject invalid plot geometry or impossible setbacks.
     if (!geometryResult.isValid) {
+
         return res.status(400).json({
-            message: "Invalid plot geometry.",
+
+            message: "Invalid plot or buildable geometry.",
+
             errors: geometryResult.errors
         });
     }
+
 
     // 9. Validate requirements object
     if (
@@ -112,6 +135,7 @@ const createBlueprint = async (req, res) => {
             message: "Requirements must be a valid object."
         });
     }
+
 
     // Validate floors
     if (
@@ -127,6 +151,7 @@ const createBlueprint = async (req, res) => {
         });
     }
 
+
     // Validate occupancy
     if (
         requirements.totalOccupancy !== undefined &&
@@ -140,6 +165,7 @@ const createBlueprint = async (req, res) => {
         });
     }
 
+
     // Validate spaces array
     if (
         requirements.spaces !== undefined &&
@@ -150,10 +176,13 @@ const createBlueprint = async (req, res) => {
         });
     }
 
+
     const totalFloors = requirements.floors ?? 1;
+
 
     // Validate individual spaces
     if (requirements.spaces) {
+
         for (const [index, space] of requirements.spaces.entries()) {
 
             if (
@@ -166,6 +195,7 @@ const createBlueprint = async (req, res) => {
                 });
             }
 
+
             // Validate spaceType
             if (
                 typeof space.spaceType !== "string" ||
@@ -177,6 +207,7 @@ const createBlueprint = async (req, res) => {
                 });
             }
 
+
             // Validate quantity
             if (
                 !Number.isInteger(space.quantity) ||
@@ -187,6 +218,7 @@ const createBlueprint = async (req, res) => {
                     message: `Quantity for space at index ${index} must be between 1 and 200.`
                 });
             }
+
 
             // Validate capacity
             if (
@@ -200,6 +232,7 @@ const createBlueprint = async (req, res) => {
                     message: `Capacity for space at index ${index} must be a positive integer.`
                 });
             }
+
 
             // Validate minimum area
             if (
@@ -215,6 +248,7 @@ const createBlueprint = async (req, res) => {
                 });
             }
 
+
             // Validate preferred floor
             if (
                 space.preferredFloor !== undefined &&
@@ -228,6 +262,7 @@ const createBlueprint = async (req, res) => {
                     message: `Preferred floor for space at index ${index} must be within the building's floor range.`
                 });
             }
+
 
             // Validate notes
             if (
@@ -244,6 +279,7 @@ const createBlueprint = async (req, res) => {
         }
     }
 
+
     // Validate special requirements
     if (
         requirements.specialRequirements !== undefined &&
@@ -256,6 +292,7 @@ const createBlueprint = async (req, res) => {
             message: "Special requirements must be a string of at most 2000 characters."
         });
     }
+
 
     // 10. Validate Vastu object
     if (
@@ -271,6 +308,7 @@ const createBlueprint = async (req, res) => {
         });
     }
 
+
     if (vastu) {
 
         // Validate enabled
@@ -282,6 +320,7 @@ const createBlueprint = async (req, res) => {
                 message: "Vastu enabled must be a boolean."
             });
         }
+
 
         // Validate priority
         const allowedPriorities = [
@@ -299,6 +338,7 @@ const createBlueprint = async (req, res) => {
             });
         }
 
+
         // Validate spacePreferences array
         if (
             vastu.spacePreferences !== undefined &&
@@ -308,6 +348,7 @@ const createBlueprint = async (req, res) => {
                 message: "Vastu spacePreferences must be an array."
             });
         }
+
 
         // Validate individual Vastu preferences
         if (vastu.spacePreferences) {
@@ -323,7 +364,11 @@ const createBlueprint = async (req, res) => {
                 "northwest"
             ];
 
-            for (const [index, preference] of vastu.spacePreferences.entries()) {
+
+            for (
+                const [index, preference]
+                of vastu.spacePreferences.entries()
+            ) {
 
                 // Validate preference object
                 if (
@@ -336,6 +381,7 @@ const createBlueprint = async (req, res) => {
                     });
                 }
 
+
                 // Validate spaceType
                 if (
                     typeof preference.spaceType !== "string" ||
@@ -347,9 +393,12 @@ const createBlueprint = async (req, res) => {
                     });
                 }
 
+
                 // Validate preferred direction
                 if (
-                    !allowedDirections.includes(preference.preferredDirection)
+                    !allowedDirections.includes(
+                        preference.preferredDirection
+                    )
                 ) {
                     return res.status(400).json({
                         message: `Invalid preferred direction at Vastu preference index ${index}.`
@@ -358,6 +407,7 @@ const createBlueprint = async (req, res) => {
             }
         }
     }
+
 
     // 11. Validate general preferences
     if (
@@ -373,6 +423,7 @@ const createBlueprint = async (req, res) => {
         });
     }
 
+
     // 12. Validate title
     if (
         title !== undefined &&
@@ -386,6 +437,7 @@ const createBlueprint = async (req, res) => {
             message: "Title must be a non-empty string of at most 100 characters."
         });
     }
+
 
     // 13. Validate jurisdiction object
     if (
@@ -401,6 +453,7 @@ const createBlueprint = async (req, res) => {
         });
     }
 
+
     // Validate jurisdiction fields
     if (jurisdiction) {
 
@@ -409,6 +462,7 @@ const createBlueprint = async (req, res) => {
             "state",
             "city"
         ];
+
 
         for (const field of jurisdictionFields) {
 
@@ -427,26 +481,99 @@ const createBlueprint = async (req, res) => {
         }
     }
 
+    // Calculate preliminary space feasibility.
+const feasibilityReport = calculateSpaceFeasibility({
+
+    geometry: geometryResult,
+
+    requirements,
+
+    unit: plot.unit ?? "ft"
+
+}, {
+
+    infrastructureAllowance: 0.25
+});
+
+
+// Reject invalid feasibility inputs.
+if (!feasibilityReport.isValid) {
+
+    return res.status(400).json({
+
+        message: "Invalid feasibility input.",
+
+        errors: feasibilityReport.errors
+    });
+}
+
+
+// Reject physically infeasible requirements.
+if (feasibilityReport.isFeasible === false) {
+
+    return res.status(422).json({
+
+        message: "Requested spaces exceed available building capacity.",
+
+        feasibilityReport
+    });
+}
+
+
     // 14. Create blueprint document
     const blueprint = await Blueprint.create({
+
         user: req.user._id,
+
         title: title?.trim(),
+
         buildingType,
+
         plot,
+
         setbacks: setbacks ?? [],
+
+        // Store server-calculated geometry.
+        geometry: {
+
+            plotArea: geometryResult.plotArea,
+
+            buildableArea: geometryResult.buildableArea,
+
+            setbackArea: geometryResult.setbackArea,
+
+            buildablePercentage: Math.min(
+                100,
+                geometryResult.buildablePercentage
+            ),
+
+            buildableRegions: geometryResult.buildableRegions
+        },
+
+        feasibilityReport,
+
         requirements,
+
         vastu,
+
         preferences: preferences?.trim(),
+
         jurisdiction
     });
 
+
     // 15. Send response
     return res.status(201).json({
+
         message: "Blueprint created successfully.",
+
         blueprint
     });
 };
 
-const blueprintController = {createBlueprint}
 
-export default blueprintController
+const blueprintController = {
+    createBlueprint
+};
+
+export default blueprintController;

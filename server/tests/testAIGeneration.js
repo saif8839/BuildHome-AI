@@ -10,6 +10,9 @@ import {
     generateBlueprintLayout
 } from "../services/aiGenerationService.js";
 
+import {
+    validateGeneratedLayout
+} from "../services/layoutValidationService.js";
 
 // Sample plot.
 const plot = {
@@ -178,6 +181,18 @@ const testAIGeneration = async () => {
 
         console.timeEnd("Generation time");
 
+        console.log("\nValidating generated layout...\n");
+
+        console.time("Validation time");
+
+        const validationReport = validateGeneratedLayout({
+
+            blueprint,
+
+            generatedLayout: result.generatedLayout
+        });
+
+        console.timeEnd("Validation time");
 
         console.log(
             "\n========== GENERATED LAYOUT ==========\n"
@@ -189,10 +204,58 @@ const testAIGeneration = async () => {
 
 
         console.log(
-            "\nAI BLUEPRINT GENERATION SUCCESSFUL"
+            "\n========== VALIDATION REPORT ==========\n"
+        );
+
+        console.log(
+            JSON.stringify(validationReport, null, 2)
         );
 
 
+        console.log(
+            "\n========== VALIDATION SUMMARY ==========\n"
+        );
+
+        console.log({
+
+            isValid: validationReport.isValid,
+
+            status: validationReport.status,
+
+            totalErrors: validationReport.errors.length,
+
+            totalWarnings: validationReport.warnings.length,
+
+            totalFloors: result.generatedLayout.floors.length,
+
+            totalSpaces: validationReport.spaceAnalysis.length
+        });
+
+
+        if (!validationReport.isValid) {
+
+            console.error(
+                "\nAI GENERATED LAYOUT FAILED VALIDATION"
+            );
+
+            process.exitCode = 1;
+
+            return;
+        }
+
+
+        if (validationReport.warnings.length > 0) {
+
+            console.warn(
+                "\nAI BLUEPRINT GENERATED SUCCESSFULLY WITH WARNINGS"
+            );
+
+        } else {
+
+            console.log(
+                "\nAI BLUEPRINT GENERATED AND VALIDATED SUCCESSFULLY"
+            );
+        }
     } catch (error) {
 
         console.error(
